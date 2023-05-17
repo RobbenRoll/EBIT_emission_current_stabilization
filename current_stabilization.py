@@ -14,8 +14,8 @@ class BeamCurrentStabilizer():
 	##self._pvname_V_focus_set = 'EBIT:GUNFOCUS:VOL' # pv name of EPICS focus voltage setpoint
 	_max_I_target_mA = 1000
 	_default_config = {"I_target_mA" : 50, # target current [mA]
-	                   "V_focus_min" : 500, # minimal allowable focus voltage [V]
-					   "V_focus_max" : 700, # maximal allowable focus voltage [V]
+	                   "V_focus_min" : 400, # minimal allowable focus voltage [V]
+					   "V_focus_max" : 600, # maximal allowable focus voltage [V]
 					   "Kp" : 0.2, "Ki" : 0.0, "Kd" : 0.0,
 					   "min_dV_focus" : 0.1, # minimal allowable focus voltage step [V]
 					   "max_dV_focus" : 5.0, # maximal allowable focus voltage step [V] #TODO: RENAME
@@ -37,7 +37,7 @@ class BeamCurrentStabilizer():
 			self.I_resolution_mA = self._default_config["I_resolution_mA"]
 			self.sampling_interval = self._default_config["sampling_interval"]
 		else:
-			self.load_config()
+			self.load_config(reset_pid=True)
 
 	def save_config(self, fname="stabilizer_config.json"):
 		"""Write current stabilizer configuration to json file"""
@@ -56,18 +56,19 @@ class BeamCurrentStabilizer():
 		"""Load config from json file"""
 		with open(fname, "r") as file:
 			config = json.load(file)
+		self.I_target_mA = config["I_target_mA"]
 		if reset_pid:
-			self.pid.clear()
-		self.pid.SetPoint = config["I_target_mA"]
+			self.pid = PID.PID()
 		self.pid.setKp(config["Kp"])
 		self.pid.setKi(config["Ki"])
 		self.pid.setKd(config["Kd"])
-		self.I_target_mA = config["I_target_mA"]
+		self.pid.SetPoint = config["I_target_mA"]
 		self.V_focus_min = config["V_focus_min"]
 		self.V_focus_max = config["V_focus_max"]
-		self.V_focus_min = config["V_focus_min"]
-		self.V_focus_min = config["V_focus_min"]
-		self.V_focus_min = config["V_focus_min"]
+		self.min_dV_focus = config["min_dV_focus"]
+		self.max_dV_focus = config["max_dV_focus"]
+		self.I_resolution_mA = config["I_resolution_mA"]
+		self.sampling_interval = config["sampling_interval"]
 
 	def set_target_current(self, I_target_mA, V_focus_min=None, V_focus_max=None):
 		"""Update target current and optionally update focus voltage limits"""
@@ -75,7 +76,6 @@ class BeamCurrentStabilizer():
 		self.pid.SetPoint = I_target_mA
 		self.V_focus_min = V_focus_min or self.V_focus_min
 		self.V_focus_max = V_focus_max or self.V_focus_max
-
 
 	def activate(self, write_logs=True):
 		print("\n##### Starting beam current stabilization #####")
@@ -143,7 +143,7 @@ if __name__ == "__main__":
 		print("Set target beam current: {:.1f} mA".format(stabilizer.I_target_mA))
 		print("Set focus voltage limits (min/max): {:.3f} / {:.3f} V".format(
 		                        stabilizer.V_focus_min, stabilizer.V_focus_max))
-	except:
+	except FileNotFoundError:
 		stabilizer = BeamCurrentStabilizer(use_default_config=True)
 		print("Loading configuration from 'stabilizer_config.json' failed. Loading default configuration instead.")
 		print("Set target beam current: {:.1f} mA".format(stabilizer.I_target_mA))
