@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # Software PID controller for EBIT beam current stabilitzation
 # Regulates the focus bias in order to stabilize the cathode emission current
-##import epics
+import epics
 from ivPID import PID
 import time
 from datetime import datetime
@@ -10,8 +10,8 @@ import json
 import csv
 
 class BeamCurrentStabilizer():
-	##self._pvname_I_target_mA = 'EBIT:CATHCUR:RDCUR' #  pv name of EPICS cathode current readback
-	##self._pvname_V_focus_set = 'EBIT:GUNFOCUS:VOL' # pv name of EPICS focus voltage setpoint
+	_pvname_I_target_mA = 'EBIT:CATHCUR:RDCUR' #  pv name of EPICS cathode current readback
+	_pvname_V_focus_set = 'EBIT:GUNFOCUS:VOL' # pv name of EPICS focus voltage setpoint
 	_max_I_target_mA = 1000
 	_default_config = {"I_target_mA" : 50, # target current [mA]
 	                   "V_focus_min" : 400, # minimal allowable focus voltage [V]
@@ -82,7 +82,7 @@ class BeamCurrentStabilizer():
 		if self.I_target_mA > self._max_I_target_mA:
 			raise Exception("Set target exceeds maximum allowable target current!")
 		self.save_config()
-		i = 0 ## TODO: remove after testing
+		## i = 0 # for testing only ## TODO: remove after testing
 		if write_logs:
 			now = datetime.now()
 			date_time = now.strftime("%Y-%m-%d_%H%M%S")
@@ -96,15 +96,15 @@ class BeamCurrentStabilizer():
 			while True:
 				self.load_config(reset_pid=False)
 				# TODO:  Get emission current readback and focus voltage setpoint
-				I_mon_mA = self.I_target_mA*(1+1.0/(i+1)) ## epics.caget(self._pvname_I_target_mA)
-				V_focus_set = 500.1 ## epics.caget(self._pvname_V_focus_set)
-				i += 1 ## TODO: remove after testing
+				I_mon_mA = epics.caget(self._pvname_I_target_mA) ## self.I_target_mA*(1+1.0/(i+1)) # for testing
+				V_focus_set = epics.caget(self._pvname_V_focus_set) # 500.1 # for testing
+				##i += 1 # for testing ## TODO: remove after testing
 
 				now = datetime.now()
 				date_time = now.strftime("%Y-%m-%d %H:%M:%S")
 				self.pid.update(I_mon_mA)
 				dV_focus_set = self.pid.output
-				print("{}  I_mon: {:>5.1f} mA,  V_focus_set: {:>5.3f} V,  dV_focus_set: {:>6.3f} V".format(
+				print("{}  I_mon: {:>5.3f} mA,  V_focus_set: {:>5.3f} V,  dV_focus_set: {:>6.3f} V".format(
 				      date_time, I_mon_mA, V_focus_set, dV_focus_set))
 				if np.abs(I_mon_mA - self.I_target_mA) < self.I_resolution_mA:
 					print("Focus voltage kept constant - I_mon and I_target "
@@ -121,7 +121,7 @@ class BeamCurrentStabilizer():
 				elif np.abs(dV_focus_set) < self.min_dV_focus:
 					print("Focus voltage kept constant - "
 			              "dV_focus_set = {:.3f} < min_dV_focus = {:.3f}".format(
-						  dV_focus_set, min_dV_focus))
+						  dV_focus_set, self.min_dV_focus))
 					pass
 				else:
 					if np.abs(dV_focus_set) > self.max_dV_focus:
@@ -129,7 +129,7 @@ class BeamCurrentStabilizer():
 						      "allowed value ({:.3f}V).".format(self.max_dV_focus))
 						dV_focus_set = np.sign(dV_focus_set)*self.max_dV_focus
 					V_focus_set += dV_focus_set
-					##epics.caput(self._pvname_V_focus_set, V_focus_set) # TODO: Update focus voltage setpoint in EPICS
+					epics.caput(self._pvname_V_focus_set, V_focus_set) ##
 					print("Set focus voltage to: {:.3f} V".format(V_focus_set))
 
 				if write_logs:
