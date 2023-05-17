@@ -1,0 +1,12 @@
+{
+    "I_target_mA": 8.0,
+    "V_focus_min": 600,
+    "V_focus_max": 800,
+    "Kp": 20.0,
+    "Ki": 0.0,
+    "Kd": 0.0,
+    "min_dV_focus": 0.1,
+    "max_dV_focus": 10.0,
+    "I_resolution_mA": 0.122,
+    "sampling_interval": 10
+}
