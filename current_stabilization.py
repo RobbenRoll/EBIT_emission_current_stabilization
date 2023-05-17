@@ -104,16 +104,11 @@ class BeamCurrentStabilizer():
 				date_time = now.strftime("%Y-%m-%d %H:%M:%S")
 				self.pid.update(I_mon_mA)
 				dV_focus_set = self.pid.output
-				print("{}  I_mon: {:>5.1f} mA,   V_focus_set: {:>5.3f} V,   dV_focus_set: {:>5.3f} V".format(
+				print("{}  I_mon: {:>5.1f} mA,  V_focus_set: {:>5.3f} V,  dV_focus_set: {:>6.3f} V".format(
 				      date_time, I_mon_mA, V_focus_set, dV_focus_set))
 				if np.abs(I_mon_mA - self.I_target_mA) < self.I_resolution_mA:
-					print("Focus voltage kept constant - I_mon and I_target agree within "
-					      "the current readback resolution." )
-					pass
-				elif np.abs(dV_focus_set) < self.min_dV_focus:
-					print("Focus voltage kept constant - "
-			              "dV_focus_set = {:.3f} < min_dV_focus = {:.3f}".format(
-						  dV_focus_set, min_dV_focus))
+					print("Focus voltage kept constant - I_mon and I_target "
+					      "agree within the current readback resolution." )
 					pass
 				elif V_focus_set + dV_focus_set < self.V_focus_min:
 					print("Focus voltage kept constant - demanded set point "
@@ -123,10 +118,19 @@ class BeamCurrentStabilizer():
 					print("Focus voltage kept constant - demanded set point "
 					      "lies above the allowed focus voltage range.")
 					pass
+				elif np.abs(dV_focus_set) < self.min_dV_focus:
+					print("Focus voltage kept constant - "
+			              "dV_focus_set = {:.3f} < min_dV_focus = {:.3f}".format(
+						  dV_focus_set, min_dV_focus))
+					pass
 				else:
+					if np.abs(dV_focus_set) > self.max_dV_focus:
+						print("Proposed voltage step truncated to maximal "
+						      "allowed value ({:.3f}V).".format(self.max_dV_focus))
+						dV_focus_set = np.sign(dV_focus_set)*self.max_dV_focus
 					V_focus_set += dV_focus_set
 					##epics.caput(self._pvname_V_focus_set, V_focus_set) # TODO: Update focus voltage setpoint in EPICS
-					print("Set focus voltage to: {:.3f}".format(V_focus_set))
+					print("Set focus voltage to: {:.3f} V".format(V_focus_set))
 
 				if write_logs:
 					log.writerow([date_time," {:.3f}".format(I_mon_mA)," {:.3f}".format(V_focus_set)])
@@ -140,16 +144,16 @@ if __name__ == "__main__":
 	try:
 		stabilizer = BeamCurrentStabilizer(use_default_config=False)
 		print("Loaded configuration from stabilizer_config.json")
-		print("Set target beam current: {:.1f} mA".format(stabilizer.I_target_mA))
-		print("Set focus voltage limits (min/max): {:.3f} / {:.3f} V".format(
+		print("\nSet target beam current: {:.1f} mA".format(stabilizer.I_target_mA))
+		print("Set focus voltage limits (min / max): {:.3f} / {:.3f} V".format(
 		                        stabilizer.V_focus_min, stabilizer.V_focus_max))
 	except FileNotFoundError:
 		stabilizer = BeamCurrentStabilizer(use_default_config=True)
 		print("Loading configuration from 'stabilizer_config.json' failed. Loading default configuration instead.")
-		print("Set target beam current: {:.1f} mA".format(stabilizer.I_target_mA))
+		print("\nSet target beam current: {:.1f} mA".format(stabilizer.I_target_mA))
 		print("Set focus voltage limits (min/max): {:.3f} / {:.3f} V".format(
 		                        stabilizer.V_focus_min, stabilizer.V_focus_max))
-	run_stabilizer = input("Activate beam current stabilization with the above parameters? (y/n)")
+	run_stabilizer = input("\nActivate beam current stabilization with the above parameters? (y/n)")
 	if run_stabilizer in ["Y", "y", "Yes", "yes", "YES"]:
 		stabilizer.activate(write_logs=True)
 	else:
