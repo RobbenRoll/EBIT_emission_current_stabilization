@@ -2,3 +2,6 @@
 .idea
 __pycache__
 _build
+logs/
+*.json
+*.csv
